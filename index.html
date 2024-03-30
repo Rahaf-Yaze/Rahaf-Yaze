@@ -5,8 +5,17 @@
   <title>Ramallah Libraries</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.6.0/dist/leaflet.css" />
   <style>
-    body { margin: 0px; height: 100%; width: 100%; }
-    #map { position: absolute; width: 100%; top: 0px; bottom: 0; }
+    body {
+      margin: 0px;
+      height: 100%;
+      width: 100%;
+    }
+    #map {
+      position: absolute;
+      width: 100%;
+      top: 0px;
+      bottom: 0;
+    }
   </style>
 </head>
 <body>
@@ -19,46 +28,69 @@
       center:  [31.9048074, 35.2013228],
       zoom: 17.5,
     };
-
     const map = L.map("map", mapOptions);
-
     L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
       attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
       maxZoom: 20
     }).addTo(map);
 
-    // Load and display Libraries from GitHub
-    $.getJSON("https://Rahaf-Yaze.github.io/Libraries.json", function(data) {
+    function loadLibraries() {
+      return $.getJSON("https://Rahaf-Yaze.github.io/Libraries.json");
+    }
+
+    function loadZones() {
+      return $.getJSON("https://Rahaf-Yaze.github.io/RamallahZones.json");
+    }
+
+    function displayLibraries(data) {
       L.geoJson(data, {
         pointToLayer: function(feature, latlng) {
           return L.circleMarker(latlng, {
-            radius: 8,
-            color: "purple",
-            weight: 1,
+            radius: 6,
+            fillColor: "#FFFFFF", // 
+            color: "#800080", // 
+            weight: 2,
             opacity: 1,
             fillOpacity: 0.8
           });
         },
         onEachFeature: function(feature, layer) {
-          layer.on('click', function(e) {
-            alert("Library Name: " + feature.properties.BUSNIESS_1);
-          });
+          if (feature.properties && feature.properties.NAME_ENGLI) {
+            layer.bindPopup(feature.properties.NAME_ENGLI);
+          }
         }
       }).addTo(map);
-    });
+    }
 
-    // Load and display Ramallah Zones from GitHub
-    $.getJSON("https://Rahaf-Yaze.github.io/RamallahZones.json", function(data) {
+    function displayZones(data, libraries) {
+      const libraryPoints = libraries.features.map(feature => L.latLng(feature.geometry.coordinates[1], feature.geometry.coordinates[0]));
+
       L.geoJson(data, {
-        style: function(feature) {
+        filter: function(feature) {
+          // Convert each zone's coordinates into a Leaflet polygon and check if any library is within it
+          return libraryPoints.some(point => {
+            const zonePolygon = L.polygon(feature.geometry.coordinates[0].map(coord => [coord[1], coord[0]]));
+            return zonePolygon.getBounds().contains(point);
+          });
+        },
+        style: function() {
           return {
-            color: "pink", 
-            weight: 2,
+            color: "#8A2BE2", 
+            weight: 3,
             opacity: 1,
-            fillOpacity: 0 // Transparent zones
+            fillOpacity: 0
           };
         }
       }).addTo(map);
+    }
+
+    // Ensure libraries are loaded before zones so that zones can be filtered based on library locations
+    loadLibraries().done(function(libraryData) {
+      displayLibraries(libraryData);
+
+      loadZones().done(function(zoneData) {
+        displayZones(zoneData, libraryData);
+      });
     });
   </script>
 </body>
