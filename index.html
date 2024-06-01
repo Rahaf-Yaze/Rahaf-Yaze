@@ -1,64 +1,84 @@
 <!DOCTYPE html>
-<html>
-
+<html lang="en">
 <head>
-    <title>Ramallah Transportation Map</title>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-    <style>
-        #map {
-            height: 100vh;
-            width: 100%;
-        }
-
-        .leaflet-container {
-            background: #141212;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>خريطة GeoJSON</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css" />
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+    #map {
+      height: 100%;
+    }
+  </style>
 </head>
-
 <body>
-    <div id="map"></div>
+  <div id='map'></div>
 
-    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-    <script>
-        var map = L.map('map').setView([31.9025, 35.1956], 13);
+  <script src='https://unpkg.com/leaflet@1.7.1/dist/leaflet.js'></script>
+  <script src='https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js'></script>
+  <script>
+    var map = L.map('map').setView([31.9038, 35.2034], 13); // إحداثيات مدينة رام الله
 
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-            attribution: '&copy; <a href="https://carto.com/attributions">CARTO</a>'
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
+
+    var markers = L.markerClusterGroup();
+
+    // تحميل وإضافة الطبقة لمواقع الحافلات
+    fetch('https://Rahaf-Yaze.github.io/bus.geojson')
+      .then(response => response.json())
+      .then(data => {
+        L.geoJSON(data, {
+          onEachFeature: function(feature, layer) {
+            var popupContent = "<table>";
+            for (var property in feature.properties) {
+              popupContent += "<tr><td>" + property + "</td><td>" + feature.properties[property] + "</td></tr>";
+            }
+            popupContent += "</table>";
+            layer.bindPopup(popupContent);
+          }
+        }).addTo(markers);
+        markers.addTo(map);
+      });
+
+    // تحميل وإضافة الطبقة للطرق
+    fetch('https://Rahaf-Yaze.github.io/roads.geojson')
+      .then(response => response.json())
+      .then(data => {
+        L.geoJSON(data).addTo(map);
+      });
+
+    // تحميل وإضافة الطبقة لمواقع السمسيات
+    fetch('https://Rahaf-Yaze.github.io/Ramallah.geojson')
+      .then(response => response.json())
+      .then(data => {
+        L.geoJSON(data).addTo(map);
+      });
+
+    // تحميل وإضافة التيل التيل لكل نقطة
+    fetch('https://Rahaf-Yaze.github.io/bus.geojson')
+      .then(response => response.json())
+      .then(data => {
+        L.geoJSON(data, {
+          style: function (feature) {
+            return {
+              color: "#ff7800",
+              weight: 5,
+              opacity: 0.65
+            };
+          }
         }).addTo(map);
+      });
 
-
-        function loadGeoJSON(url, layerGroup) {
-            fetch(url)
-                .then(response => response.json())
-                .then(data => {
-                    L.geoJSON(data, {
-                        onEachFeature: function (feature, layer) {
-                            var popupContent = "";
-                            for (var key in feature.properties) {
-                                popupContent += "<p>" + key + ": " + feature.properties[key] + "</p>";
-                            }
-                            layer.bindPopup(popupContent);
-                        }
-                    }).addTo(layerGroup);
-                })
-                .catch(error => {
-                    console.error('Error loading the GeoJSON data: ', error);
-                });
-        }
-
-        var busLayer = L.layerGroup().addTo(map);
-        var ramallahLayer = L.layerGroup().addTo(map);
-        var roadsLayer = L.layerGroup().addTo(map);
-
-
-        loadGeoJSON('data/bus.geojson', busLayer);
-        loadGeoJSON('data/Ramallah.geojson', ramallahLayer);
-        loadGeoJSON('data/roads.geojson', roadsLayer);
-
-    </script>
+  </script>
 </body>
-
 </html>
+
